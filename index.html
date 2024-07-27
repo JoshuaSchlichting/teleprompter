@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Webcam Recording with Teleprompter</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            background-color: #000;
+        }
+        #container {
+            position: relative;
+            width: 640px;
+            height: 480px;
+        }
+        #teleprompter {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            pointer-events: none;
+        }
+        #teleprompterText {
+            position: relative;
+            white-space: pre-wrap;
+            font-size: 24px;
+            color: white;
+            background: rgba(0, 0, 0, 0.5);
+        }
+        #controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+        }
+        #recordingIndicator {
+            width: 20px;
+            height: 20px;
+            background-color: red;
+            display: none;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <video id="video" width="640" height="480" autoplay muted></video>
+        <div id="teleprompter">
+            <div id="teleprompterText"></div>
+        </div>
+    </div>
+    <div id="controls">
+        <textarea id="teleprompterInput" rows="4" cols="50" placeholder="Enter teleprompter text here..."></textarea>
+        <button id="startTeleprompterButton">Start Teleprompter</button>
+        <button id="stopTeleprompterButton">Stop Teleprompter</button>
+        <button id="startButton">Start Recording</button>
+        <button id="stopButton">Stop Recording</button>
+        <label for="speedControl">Speed:</label>
+        <input type="range" id="speedControl" min="0.1" max="10" value="5" step="0.1">
+        <div id="recordingIndicator"></div>
+    </div>
+    <script>
+        const video = document.getElementById('video');
+        const startButton = document.getElementById('startButton');
+        const stopButton = document.getElementById('stopButton');
+        const teleprompterInput = document.getElementById('teleprompterInput');
+        const teleprompterText = document.getElementById('teleprompterText');
+        const startTeleprompterButton = document.getElementById('startTeleprompterButton');
+        const stopTeleprompterButton = document.getElementById('stopTeleprompterButton');
+        const speedControl = document.getElementById('speedControl');
+        const recordingIndicator = document.getElementById('recordingIndicator');
+        let chunks = [];
+        let teleprompterInterval;
+        let scrollPosition = 0;
+        let speed = 5;
+
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+                const mediaRecorder = new MediaRecorder(stream);
+
+                startButton.addEventListener('click', function() {
+                    mediaRecorder.start();
+                    recordingIndicator.style.display = 'block';
+                });
+
+                stopButton.addEventListener('click', function() {
+                    mediaRecorder.stop();
+                    recordingIndicator.style.display = 'none';
+                });
+
+                mediaRecorder.ondataavailable = function(e) {
+                    chunks.push(e.data);
+                };
+
+                mediaRecorder.onstop = function() {
+                    const blob = new Blob(chunks, { type: 'video/webm' });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'recorded-video.webm';
+                    document.body.appendChild(a);
+                    a.click();
+                    chunks = [];
+                };
+
+                startTeleprompterButton.addEventListener('click', function() {
+                    teleprompterText.innerText = teleprompterInput.value;
+                    scrollPosition = teleprompter.offsetHeight;
+                    teleprompterText.style.top = scrollPosition + 'px';
+                    teleprompterInterval = setInterval(function() {
+                        scrollPosition -= speed;
+                        teleprompterText.style.top = scrollPosition + 'px';
+                    }, 100);
+                });
+
+                stopTeleprompterButton.addEventListener('click', function() {
+                    clearInterval(teleprompterInterval);
+                });
+
+                speedControl.addEventListener('input', function() {
+                    speed = parseFloat(speedControl.value);
+                });
+
+                teleprompterInput.addEventListener('scroll', function(event) {
+                    teleprompterText.style.top = teleprompter.offsetHeight - event.target.scrollTop + 'px';
+                });
+            })
+            .catch(function(err) {
+                console.error('Error accessing webcam: ', err);
+            });
+    </script>
+</body>
+</html>
